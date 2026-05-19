@@ -1,68 +1,91 @@
+const fs = require('fs');
+const path = require('path');
 const { db } = require('./db');
 
-const DEFAULT_PRODUCTS = [
-  {
-    id: '001',
-    name: 'Áo Thun Basic',
-    category: 'Áo',
-    price: 150000,
-    image: '👕',
-    rating: 4.5,
-    sold: 320,
-    createdAt: '2024-05-20',
-    description: 'Áo thun trắng basic chất lượng cao',
-  },
-  {
-    id: '002',
-    name: 'Áo Sơ Mi Nam',
-    category: 'Áo',
-    price: 280000,
-    image: '👔',
-    rating: 4.8,
-    sold: 210,
-    createdAt: '2024-04-15',
-    description: 'Áo sơ mi nam kiểu dáng hiện đại',
-  },
-  {
-    id: '003',
-    name: 'Áo Len Nữ',
-    category: 'Áo',
-    price: 320000,
-    image: '🧥',
-    rating: 4.6,
-    sold: 410,
-    createdAt: '2024-06-10',
-    description: 'Áo len nữ ấm áp mùa đông',
-  },
-];
+function loadInitialProducts() {
+  const dataFile = path.join(__dirname, '..', 'data', 'products.json');
+  try {
+    const fileContent = fs.readFileSync(dataFile, 'utf8');
+    const parsed = JSON.parse(fileContent);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
+    }
+  } catch (err) {
+    // Nếu không đọc được file, dùng fallback mặc định
+  }
+
+  return [
+    {
+      id: '001',
+      name: 'Áo Thun Basic',
+      category: 'Áo',
+      price: 150000,
+      image: '👕',
+      rating: 4.5,
+      sold: 320,
+      createdAt: '2024-05-20',
+      description: 'Áo thun trắng basic chất lượng cao',
+    },
+    {
+      id: '002',
+      name: 'Áo Sơ Mi Nam',
+      category: 'Áo',
+      price: 280000,
+      image: '👔',
+      rating: 4.8,
+      sold: 210,
+      createdAt: '2024-04-15',
+      description: 'Áo sơ mi nam kiểu dáng hiện đại',
+    },
+    {
+      id: '003',
+      name: 'Áo Len Nữ',
+      category: 'Áo',
+      price: 320000,
+      image: '🧥',
+      rating: 4.6,
+      sold: 410,
+      createdAt: '2024-06-10',
+      description: 'Áo len nữ ấm áp mùa đông',
+    },
+  ];
+}
 
 async function initializeProducts() {
+  const initialProducts = loadInitialProducts();
   const count = db.prepare('SELECT COUNT(*) AS count FROM products').get();
+
+  const insert = db.prepare(
+    `INSERT INTO products (id, name, category, price, image, rating, sold, description, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+
+  const insertMany = db.transaction((items) => {
+    for (const product of items) {
+      insert.run(
+        product.id,
+        product.name,
+        product.category,
+        product.price,
+        product.image,
+        product.rating || null,
+        product.sold || 0,
+        product.description || null,
+        product.createdAt || new Date().toISOString(),
+        product.updatedAt || null
+      );
+    }
+  });
+
   if (count.count === 0) {
-    const insert = db.prepare(
-      `INSERT INTO products (id, name, category, price, image, rating, sold, description, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    );
+    insertMany(initialProducts);
+    return initialProducts;
+  }
 
-    const insertMany = db.transaction((items) => {
-      for (const product of items) {
-        insert.run(
-          product.id,
-          product.name,
-          product.category,
-          product.price,
-          product.image,
-          product.rating || null,
-          product.sold || 0,
-          product.description || null,
-          product.createdAt || new Date().toISOString(),
-          product.updatedAt || null
-        );
-      }
-    });
-
-    insertMany(DEFAULT_PRODUCTS);
-    return DEFAULT_PRODUCTS;
+  const existingIds = db.prepare('SELECT id FROM products').all().map(row => row.id);
+  const missingProducts = initialProducts.filter(product => !existingIds.includes(product.id));
+  if (missingProducts.length > 0) {
+    insertMany(missingProducts);
   }
 
   return db.prepare('SELECT * FROM products').all();
