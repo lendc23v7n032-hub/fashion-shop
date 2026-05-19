@@ -413,7 +413,12 @@
 
             const serverResult = await submitOrderToServer(orderData);
             if (!serverResult.success) {
-                document.getElementById('errorMessage').textContent = serverResult.message || 'Đặt hàng thất bại, vui lòng thử lại.';
+                const errEl = document.getElementById('errorMessage');
+                let msg = serverResult.message || 'Đặt hàng thất bại, vui lòng thử lại.';
+                if (serverResult.details && Array.isArray(serverResult.details) && serverResult.details.length) {
+                    msg += ' ' + serverResult.details.map(d => `${d.field}: ${d.message}`).join('; ');
+                }
+                errEl.textContent = msg;
                 return;
             }
 
