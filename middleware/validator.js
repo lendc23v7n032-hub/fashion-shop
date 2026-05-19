@@ -67,7 +67,7 @@ const validateCheckout = [
 
   body('paymentMethod')
     .optional()
-    .isIn(['cash', 'banking', 'momo', 'vnpay']).withMessage('Phương thức thanh toán không hợp lệ'),
+    .isIn(['cash', 'banking', 'cod', 'bank', 'momo', 'vnpay']).withMessage('Phương thức thanh toán không hợp lệ'),
 
   body('items')
     .isArray({ min: 1 }).withMessage('Giỏ hàng không được trống'),

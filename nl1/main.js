@@ -1,5 +1,7 @@
 // ==================== PRODUCTS DATA ====================
-const API_BASE = 'https://fashion-shop-0w91.onrender.com';
+const API_BASE = window.location.protocol.startsWith('http')
+  ? window.location.origin
+  : 'https://fashion-shop-0w91.onrender.com';
 
 const products = [
     {

@@ -7,9 +7,10 @@ const securityHeaders = helmet({
   contentSecurityPolicy: false,
 });
 
+const defaultOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://fashion-shop-0w91.onrender.com'];
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
-  : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+  : defaultOrigins;
 
 const disableRateLimit = ['1', 'true', 'yes', 'on'].includes(
   String(process.env.DISABLE_RATE_LIMIT).trim().toLowerCase()
@@ -24,7 +25,15 @@ function createLimiter(options) {
 
 // CORS configuration
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: function(origin, callback) {
+    if (!origin) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error('CORS policy: Origin not allowed'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning'],
   credentials: true,
