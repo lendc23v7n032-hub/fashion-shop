@@ -16,7 +16,7 @@ const authRouter = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const frontendDir = path.join(__dirname, '..', 'nl1');
+const frontendDir = path.join(__dirname, 'nl1');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

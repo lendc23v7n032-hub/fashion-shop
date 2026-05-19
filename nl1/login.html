@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - N&L Shop</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <h1>👗 N&L Shop</h1>
+            </div>
+            <ul class="navbar-menu">
+                <li><a href="index.html">Trang chủ</a></li>
+                <li><a href="index.html#products">Sản phẩm</a></li>
+                <li><a href="new-products.html">Mới nhất</a></li>
+                <li><a href="cart.html" class="cart-link">🛒 Giỏ hàng</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Login Form -->
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-icon">👤</div>
+            <h2>Đăng Nhập</h2>
+            <p class="auth-subtitle">Chào mừng trở lại N&L Shop</p>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">📧 Email</label>
+                    <input type="email" id="email" name="email" placeholder="Nhập email của bạn" required>
+                </div>
+                <div class="form-group password-field">
+                    <label for="password">🔒 Mật khẩu</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="password" name="password" placeholder="Nhập mật khẩu" required>
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password', this)">👁️</button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-login">Đăng Nhập Ngay</button>
+                <div id="errorMessage" class="error-message"></div>
+                <div id="successMessage" class="success-message"></div>
+            </form>
+            <div class="auth-divider">
+                <span>hoặc</span>
+            </div>
+            <div class="social-login">
+                <button type="button" class="social-btn google" onclick="socialLogin('google')">
+                    <span>🔴 Đăng nhập với Google</span>
+                </button>
+                <button type="button" class="social-btn facebook" onclick="socialLogin('facebook')">
+                    <span>🔵 Đăng nhập với Facebook</span>
+                </button>
+            </div>
+            <p class="auth-link">Chưa có tài khoản? <a href="register.html">Đăng ký miễn phí</a></p>
+            <p class="demo-info">💡 Demo: demo@fashionshop.com / 123456</p>
+            <p class="demo-info">💡 Admin: admin@fashionshop.com / admin123</p>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 N&L Shop. Tất cả quyền được bảo lưu.</p>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (login(email, password)) {
+                document.getElementById('successMessage').textContent = 'Đăng nhập thành công!';
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+            } else {
+                document.getElementById('errorMessage').textContent = 'Email hoặc mật khẩu không đúng!';
+            }
+        });
+
+        function togglePasswordVisibility(fieldId, button) {
+            const input = document.getElementById(fieldId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                button.textContent = '👁️';
+            }
+        }
+
+        function socialLogin(provider) {
+            const providerName = provider === 'google' ? 'Google' : 'Facebook';
+            alert('Đăng nhập bằng ' + providerName + ' hiện đang là demo.');
+            // Đây là placeholder cho chức năng social login.
+            // Bạn có thể tích hợp OAuth/SDK thực tế sau.
+        }
+    </script>
+</body>
+</html>

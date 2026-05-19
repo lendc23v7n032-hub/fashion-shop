@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký - N&L Shop</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <h1>👗 N&L Shop</h1>
+            </div>
+            <ul class="navbar-menu">
+                <li><a href="index.html">Trang chủ</a></li>
+                <li><a href="index.html#products">Sản phẩm</a></li>
+                <li><a href="new-products.html">Mới nhất</a></li>
+                <li><a href="cart.html" class="cart-link">🛒 Giỏ hàng</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Register Form -->
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-icon">✨</div>
+            <h2>Tạo Tài Khoản</h2>
+            <p class="auth-subtitle">Tham gia N&L Shop ngay hôm nay</p>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="fullname">👤 Họ và tên</label>
+                    <input type="text" id="fullname" name="fullname" placeholder="VD: Nguyễn Văn A" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">📱 Số điện thoại</label>
+                    <input type="tel" id="phone" name="phone" placeholder="VD: 0123456789" required>
+                </div>
+                <div class="form-group">
+                    <label for="address">📍 Địa chỉ</label>
+                    <input type="text" id="address" name="address" placeholder="VD: 123 Đường Ngô Quyền, Hà Nội" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">📧 Email</label>
+                    <input type="email" id="email" name="email" placeholder="VD: nguyenvana@email.com" required>
+                </div>
+                <div class="form-group password-field">
+                    <label for="password">🔒 Mật khẩu</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="password" name="password" placeholder="Tối thiểu 6 ký tự" required>
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password', this)">👁️</button>
+                    </div>
+                </div>
+                <div class="form-group password-field">
+                    <label for="confirmPassword">✓ Xác nhận mật khẩu</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Nhập lại mật khẩu" required>
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('confirmPassword', this)">👁️</button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-login">Đăng Ký Ngay</button>
+                <div id="errorMessage" class="error-message"></div>
+                <div id="successMessage" class="success-message"></div>
+            </form>
+            <div class="auth-divider">
+                <span>hoặc</span>
+            </div>
+            <p class="auth-link">Đã có tài khoản? <a href="login.html">Đăng nhập tại đây</a></p>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 N&L Shop. Tất cả quyền được bảo lưu.</p>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const fullname = document.getElementById('fullname').value;
+            const phone = document.getElementById('phone').value;
+            const address = document.getElementById('address').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                document.getElementById('errorMessage').textContent = 'Mật khẩu không trùng khớp!';
+                return;
+            }
+            
+            if (register(fullname, phone, address, email, password)) {
+                document.getElementById('successMessage').textContent = 'Đăng ký thành công! Bạn có thể đăng nhập ngay.';
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1500);
+            } else {
+                document.getElementById('errorMessage').textContent = 'Email này đã được đăng ký!';
+            }
+        });
+
+        function togglePasswordVisibility(fieldId, button) {
+            const input = document.getElementById(fieldId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                button.textContent = '👁️';
+            }
+        }
+    </script>
+</body>
+</html>
