@@ -80,7 +80,7 @@ const validateCheckout = [
     .isInt({ min: 1, max: 99 }).withMessage('Số lượng phải từ 1-99'),
 
   body('discountCode')
-    .optional()
+    .optional({ nullable: true })
     .isString().withMessage('Mã giảm giá phải là chuỗi'),
 
   body('discountAmount')
