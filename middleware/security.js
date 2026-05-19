@@ -31,7 +31,7 @@ const corsOptions = {
 // Rate limiter cho API chung (production-safe defaults)
 const apiLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 1000, // tối đa 1000 requests mỗi 15 phút
+  max: 5000, // tối đa 5000 requests mỗi 15 phút
   message: { success: false, error: 'Quá nhiều yêu cầu, vui lòng thử lại sau' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -40,7 +40,7 @@ const apiLimiter = createLimiter({
 // Rate limiter cho checkout
 const checkoutLimiter = createLimiter({
   windowMs: 60 * 1000, // 1 phút
-  max: 50, // tối đa 50 đơn/phút
+  max: 100, // tối đa 100 đơn/phút
   message: { success: false, error: 'Quá nhiều yêu cầu thanh toán, vui lòng thử lại sau' },
   standardHeaders: true,
   legacyHeaders: false,
