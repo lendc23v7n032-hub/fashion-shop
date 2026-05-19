@@ -11,7 +11,9 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
   : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 
-const disableRateLimit = process.env.DISABLE_RATE_LIMIT === 'true';
+const disableRateLimit = ['1', 'true', 'yes', 'on'].includes(
+  String(process.env.DISABLE_RATE_LIMIT).trim().toLowerCase()
+);
 
 function createLimiter(options) {
   if (disableRateLimit) {
@@ -31,7 +33,7 @@ const corsOptions = {
 // Rate limiter cho API chung (production-safe defaults)
 const apiLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 5000, // tối đa 5000 requests mỗi 15 phút
+  max: 10000, // tối đa 10000 requests mỗi 15 phút
   message: { success: false, error: 'Quá nhiều yêu cầu, vui lòng thử lại sau' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -40,7 +42,7 @@ const apiLimiter = createLimiter({
 // Rate limiter cho checkout
 const checkoutLimiter = createLimiter({
   windowMs: 60 * 1000, // 1 phút
-  max: 100, // tối đa 100 đơn/phút
+  max: 300, // tối đa 300 đơn/phút
   message: { success: false, error: 'Quá nhiều yêu cầu thanh toán, vui lòng thử lại sau' },
   standardHeaders: true,
   legacyHeaders: false,
