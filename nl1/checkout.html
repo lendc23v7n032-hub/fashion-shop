@@ -374,7 +374,7 @@
             document.getElementById('checkoutTotal').textContent = Math.floor(total).toLocaleString() + 'đ';
         }
 
-        function processCheckout() {
+        async function processCheckout() {
             const buyNowItem = getBuyNowItem();
             const cart = getCart();
             const checkoutItems = buyNowItem ? [buyNowItem] : cart;
@@ -400,7 +400,27 @@
                 }
             }
 
-            const order = createOrder(fullname, phone, address, email, paymentMethod, checkoutItems, currentDiscountCode, currentDiscountAmount);
+            const orderData = {
+                fullname,
+                phone,
+                address,
+                email,
+                paymentMethod,
+                items: checkoutItems,
+                discountCode: currentDiscountCode || null,
+                discountAmount: currentDiscountAmount || 0
+            };
+
+            const serverResult = await submitOrderToServer(orderData);
+            if (!serverResult.success) {
+                document.getElementById('errorMessage').textContent = serverResult.message || 'Đặt hàng thất bại, vui lòng thử lại.';
+                return;
+            }
+
+            const order = serverResult.order;
+            saveOrder(order);
+            updateProductSales(checkoutItems);
+
             if (buyNowItem) {
                 clearBuyNowItem();
             } else {
@@ -412,6 +432,25 @@
 
             alert('Đặt hàng thành công! Mã đơn hàng: ' + order.id);
             window.location.href = 'orders.html';
+        }
+
+        async function submitOrderToServer(orderData) {
+            try {
+                const response = await fetch(`${API_BASE}/api/checkout`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    return { success: false, message: result.error || 'Lỗi khi gửi đơn hàng.' };
+                }
+                return { success: true, order: result };
+            } catch (error) {
+                return { success: false, message: 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại.' };
+            }
         }
     </script>
 </body>
