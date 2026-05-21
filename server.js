@@ -1,64 +1,197 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
-const { securityHeaders, corsOptions, apiLimiter, checkoutLimiter, authLimiter } = require('./middleware/security');
-const { errorHandler, notFoundHandler, asyncHandler } = require('./middleware/errorHandler');
+const dotenv = require('dotenv');
+const connectDB = require('./config/db');
+const http = require('http');
+const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+const authRoutes = require('./routes/auth');
+const productRoutes = require('./routes/products');
+const cartRoutes = require('./routes/cart');
+const orderRoutes = require('./routes/orders');
+const adminRoutes = require('./routes/admin');
+const User = require('./models/User');
+const Product = require('./models/Product');
+const Order = require('./models/Order');
+const Cart = require('./models/Cart');
+const { notFound, errorHandler } = require('./middleware/errorMiddleware');
+const { checkoutLimiter } = require('./middleware/security');
 const { validateCheckout } = require('./middleware/validator');
-const { ensureAdminUser } = require('./services/userService');
-const { createOrder } = require('./services/orderService');
-const { initDatabase } = require('./services/dbClient');
 
-const productsRouter = require('./routes/products');
-const ordersRouter = require('./routes/orders');
-const discountsRouter = require('./routes/discounts');
-const authRouter = require('./routes/auth');
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const frontendDir = path.join(__dirname, 'nl1');
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(securityHeaders);
-app.use(cors(corsOptions));
-app.use(apiLimiter);
-app.use(express.static(frontendDir));
+app.use(
+  cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  })
+);
 
-app.use('/api/auth', authLimiter, authRouter);
-app.use('/api/products', productsRouter);
-app.use('/api/orders', ordersRouter);
-app.use('/api/discounts', discountsRouter);
-
-app.post('/api/checkout', checkoutLimiter, validateCheckout, asyncHandler(async (req, res) => {
-  const order = await createOrder(req.body);
-  res.status(201).json(order);
-}));
+app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(frontendDir, 'index.html'));
+  res.json({ message: 'Fashion shop backend is running' });
 });
 
-app.use(notFoundHandler);
+app.post('/api/checkout', checkoutLimiter, validateCheckout, async (req, res) => {
+  try {
+    const {
+      fullname,
+      phone,
+      address,
+      email,
+      paymentMethod,
+      items,
+      discountCode = '',
+      discountAmount = 0,
+    } = req.body;
+
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const cartItems = Array.isArray(items) ? items : [];
+
+    const products = await Product.find({ _id: { $in: cartItems.map(item => item.productId) } });
+    if (products.length !== cartItems.length) {
+      return res.status(400).json({ message: 'Một số sản phẩm trong giỏ hàng không tồn tại.' });
+    }
+
+    const orderItems = cartItems.map(item => {
+      const product = products.find(p => p._id.toString() === item.productId);
+      return {
+        product: product._id,
+        name: product.name,
+        price: product.price,
+        quantity: item.quantity,
+      };
+    });
+
+    for (const item of orderItems) {
+      const product = products.find(p => p._id.toString() === item.product.toString());
+      if (!product) {
+        return res.status(400).json({ message: `Sản phẩm không tồn tại: ${item.name}` });
+      }
+      if (product.stock < item.quantity) {
+        return res.status(400).json({ message: `Số lượng không đủ cho sản phẩm ${product.name}` });
+      }
+    }
+
+    const orderTotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    await Promise.all(
+      products.map(product => {
+        const item = cartItems.find(i => i.productId === product._id.toString());
+        if (item) {
+          product.stock -= item.quantity;
+          return product.save();
+        }
+        return Promise.resolve();
+      })
+    );
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
+
+    const order = await Order.create({
+      user: existingUser ? existingUser._id : undefined,
+      customerName: fullname,
+      customerEmail: normalizedEmail,
+      customerPhone: phone,
+      shippingAddress: address,
+      paymentMethod,
+      discountCode: String(discountCode || '').trim().toUpperCase(),
+      discountAmount: Number(discountAmount) || 0,
+      items: orderItems,
+      totalAmount: orderTotal,
+      status: 'pending',
+    });
+
+    // if user exists, clear their cart
+    if (existingUser) {
+      try {
+        await Cart.findOneAndUpdate({ user: existingUser._id }, { items: [] });
+      } catch (e) {
+        console.error('Failed to clear cart after checkout', e);
+      }
+    }
+
+    // emit realtime events if socket.io available
+    try {
+      const io = app.locals.io;
+      if (io) {
+        if (existingUser) {
+          io.to(String(existingUser._id)).emit('orderCreated', order);
+        }
+        io.to('admins').emit('newOrder', order);
+      }
+    } catch (e) {
+      console.error('Emit order events failed', e);
+    }
+
+    res.status(201).json({ message: 'Tạo đơn hàng thành công.', order });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi khi tạo đơn hàng.' });
+  }
+});
+
+app.use(notFound);
 app.use(errorHandler);
 
-async function startServer() {
-  await initDatabase();
+const PORT = process.env.PORT || 5000;
 
-  await ensureAdminUser();
-  await require('./services/productService').initializeProducts();
-  await require('./services/discountService').initializeDiscounts();
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
-  });
-}
+const startServer = async () => {
+  try {
+    await connectDB();
 
-if (require.main === module) {
-  startServer().catch((err) => {
-    console.error('Failed to start server:', err);
+    // create HTTP server and attach Socket.IO
+    const server = http.createServer(app);
+    const io = new Server(server, {
+      cors: {
+        origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+      },
+    });
+
+    // simple socket auth using JWT passed in handshake auth or query
+    io.use(async (socket, next) => {
+      try {
+        const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+        if (!token) return next();
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        // attach minimal user info
+        socket.user = { id: decoded.id || decoded.sub, role: decoded.role };
+        return next();
+      } catch (err) {
+        return next();
+      }
+    });
+
+    io.on('connection', (socket) => {
+      if (socket.user && socket.user.id) {
+        socket.join(String(socket.user.id));
+        if (socket.user.role === 'admin') {
+          socket.join('admins');
+        }
+      }
+      socket.on('disconnect', () => {
+        // no-op for now
+      });
+    });
+
+    // make io available to controllers via app.locals
+    app.locals.io = io;
+
+    server.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Khởi động server thất bại:', error);
     process.exit(1);
-  });
-}
+  }
+};
 
-module.exports = app;
+startServer();
 
